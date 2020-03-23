@@ -6,23 +6,18 @@
 #define ILLEGAL_ARGUMENT_EXCEPTION 102 // ошибка в значении констант a и b
 
 // пути к основным файлам
-#define RES_FILE_PATH "C:\\Users\\Admin\\Desktop\\KR\\result\\res.txt"
-#define SRC_FILE_PATH "C:\\Users\\Admin\\Desktop\\KR\\source\\src.txt"
-#define LOG_FILE_PATH "C:\\Users\\Admin\\Desktop\\KR\\log\\log.txt"
+#define RES_FILE_PATH "../result/res.txt"
+#define SRC_FILE_PATH "../source/src.txt"
+#define LOG_FILE_PATH "../log/log.txt"
 #define SIZE 3 // размер массива структур
 
 // файл для логирования ошибокя
 FILE *logger;
 
-// структура для описания изменения угловой скорость вращения оболочки (W)
-struct W {
-    double *arrayOfW; // массив значений
-    int sizeOfArray; // размер массива
-};
-
-// структура для описания изменения напора жидкости (H)
-struct H {
-    double *arrayOfH; // массив значений
+/*структура для описания изменения угловой скорость вращения оболочки (W)
+структура для описания изменения напора жидкости (H)*/
+struct HW {
+    double *array; // массив значений
     int sizeOfArray; // размер массива
 };
 
@@ -36,20 +31,20 @@ struct power {
     double T; // период времени
     double t; // шаг в данном периоде
     double w10; // параметр для вычисления W
-    struct W W; // угловая скорость вращения оболочки
+    struct HW W; // угловая скорость вращения оболочки
     double F; // площадь одного отверстия
     double R; // радиус оболочки
     double u; // коэффициент расхода
     double S; /* площадь перфорированной поверхности разбрызгивателя,
                     отнесенная к 1 отверстию истечения; */
     double g; // ускорение свободного падения
-    struct H H; // напор жидкости
+    struct HW H; // напор жидкости
 };
 
 
-struct W getW(struct power array); // получаем массив со значениями W на каждом шагу табуляции
+struct HW getW(struct power array); // получаем массив со значениями W на каждом шагу табуляции
 
-struct H getH(struct power array); // получаем массив со значениями H на каждом шагу табуляции
+struct HW getH(struct power array); // получаем массив со значениями H на каждом шагу табуляции
 
 double *getN(struct power array); // табулируем функцию
 
@@ -74,33 +69,33 @@ int main() {
     return 0;
 }
 
-struct W getW(struct power array) {
-    struct W newW;
+struct HW getW(struct power array) {
+    struct HW newW;
     newW.sizeOfArray = (int) (array.T / array.t + 1); // получаем размерность мосива при определённом шаге(t)
-    newW.arrayOfW = calloc(newW.sizeOfArray, sizeof(double)); // создаем массив для всех w при итерации
+    newW.array = calloc(newW.sizeOfArray, sizeof(double)); // создаем массив для всех w при итерации
     int pos = 0; // индекс для записи в массив
     double step = array.t;
     array.t = 0;
     while (array.t <= array.T) { // создаём массив всех значий W на отрезке
-        newW.arrayOfW[pos] = array.w10 * (1 + array.a * cos(2 * M_PI / array.T * array.t) );
+        newW.array[pos] = array.w10 * (1 + array.a * cos(2 * M_PI / array.T * array.t));
         pos++;
         array.t += step;
     }
     return newW;
 }
 
-struct H getH(struct power array) {
-    struct H newH;
+struct HW getH(struct power array) {
+    struct HW newH;
     newH.sizeOfArray = (int) (array.T / array.t + 1); // получаем размерность мосива при определённом шаге(t)
-    newH.arrayOfH = calloc(newH.sizeOfArray, sizeof(double)); // создаем массив для всем w при итерации
+    newH.array = calloc(newH.sizeOfArray, sizeof(double)); // создаем массив для всем w при итерации
     int pos = 0; // индекс для записи в массив
     double step = array.t;
     array.t = 0;
     while (array.t <= array.T) {
         if ((array.t >= 0 && array.t <= array.T / 4) || (array.t >= array.T / 2 && array.t <= 3 * array.T / 4)) {
-            newH.arrayOfH[pos] = array.h0 * (1 + array.b);
+            newH.array[pos] = array.h0 * (1 + array.b);
         } else {
-            newH.arrayOfH[pos] = array.h0 * (1 - array.b);
+            newH.array[pos] = array.h0 * (1 - array.b);
         }
         array.t += step;
         pos++;
@@ -114,9 +109,9 @@ double *getN(struct power array) {
     arrayOfN = calloc(numberOfFuncTab, sizeof(double));
     double N;
     for (int i = 0; i < numberOfFuncTab; ++i) {
-        N = (2. / 3. * M_PI * array.p * pow(array.W.arrayOfW[i], 2) * array.F * array.u * pow(array.R, 3)) /
+        N = (2. / 3. * M_PI * array.p * pow(array.W.array[i], 2) * array.F * array.u * pow(array.R, 3)) /
             (array.g * array.S) *
-            sqrt(pow((pow(array.W.arrayOfW[i], 2) * pow(array.R, 2) + 2 * array.g * array.H.arrayOfH[i]), 3));
+            sqrt(pow((pow(array.W.array[i], 2) * pow(array.R, 2) + 2 * array.g * array.H.array[i]), 2));
         arrayOfN[i] = N;
     }
     return arrayOfN;
@@ -165,11 +160,11 @@ void setDataToFile(struct power paramToTable, double *funcResult) {
     fprintf(res,
             "Angular velocity of rotation of the shell versus time(W):\n"); // угловая скорость вращения оболочки в зависимости от времени
     for (int i = 0; i < paramToTable.W.sizeOfArray; ++i) {
-        fprintf(res, "%.3lf ", paramToTable.W.arrayOfW[i]);
+        fprintf(res, "%.3lf ", paramToTable.W.array[i]);
     }
     fprintf(res, "\nFluid pressure versus time(H):\n"); // напор жидкости в зависимости от времени
     for (int i = 0; i < paramToTable.H.sizeOfArray; ++i) {
-        fprintf(res, "%.3lf ", paramToTable.H.arrayOfH[i]);
+        fprintf(res, "%.3lf ", paramToTable.H.array[i]);
     }
     fprintf(res, "\nPower change graph(N):\n"); // график изменения мощности
     for (int i = 0; i < paramToTable.H.sizeOfArray; ++i) {
